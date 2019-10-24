@@ -82,6 +82,7 @@ def threaded_function(sock, serversNotResponded):
     if verify_ack(ack, segment):
         serversNotResponded.remove(address[0])
 
+
 # https://pymotw.com/3/socket/udp.html
 def rdt_send(segment, servers):
     global portNum
@@ -89,7 +90,7 @@ def rdt_send(segment, servers):
     while serversNotResponded:
         # set a stopwatch
         now = time.time()
-        future = now + 1
+        future = now + 0.01
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         for server in serversNotResponded:
             sock.sendto(segment, (server, portNum))
@@ -98,20 +99,22 @@ def rdt_send(segment, servers):
             sock.settimeout(0.001)
             try:
                 ack, address = sock.recvfrom(4096)
-                if verify_ack(ack, segment):
+                # if verify_ack(ack, segment) or pickle.loads(ack)[0] < pickle.loads(segment)[0]:
+                if verify_ack(ack, segment) or pickle.loads(ack)[0] < pickle.loads(segment)[0]:
                     serversNotResponded.remove(address[0])
             except socket.timeout:
                 continue
             break
         sock.close()
         # Timeout, sequence number = Y
-        if(serversNotResponded):
+        if (serversNotResponded):
             print('Timeout, sequence number = ' + str(int(pickle.loads(segment)[0], base=2)))
 
 
 def verify_ack(ack, segment):
     isValid = False
-    if pickle.loads(ack)[0] == pickle.loads(segment)[0] and pickle.loads(ack)[1] == '0b0000000000000000' and pickle.loads(ack)[2] == '0b1010101010101010':
+    if pickle.loads(ack)[0] == pickle.loads(segment)[0] and pickle.loads(ack)[1] == '0b0000000000000000' and \
+            pickle.loads(ack)[2] == '0b1010101010101010':
         print(str(int(pickle.loads(ack)[0], base=2)) + ' ack is valid')
         isValid = True
     # else:
@@ -130,11 +133,10 @@ if __name__ == "__main__":
     fileName = sys.argv[length - 2]
     MSS = int(sys.argv[length - 1])
 
-    # fileName = 'rfc8601.txt'
-    # MSS = 3
-
     segments = []
     make_segments(fileName, MSS)
+
+    startTime = time.time()
 
     for segment in segments:
         # print(pickle.loads(segment))
@@ -147,3 +149,6 @@ if __name__ == "__main__":
         # ack, address = sock.recvfrom(4096)
         # print(pickle.loads(ack))
         # sock.close()
+
+    endTime = time.time()
+    print('elapsed time: ' + str(endTime - startTime))
